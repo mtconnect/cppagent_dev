@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <dlib/array.h>
 
 
 class Checkpoint

@@ -23,7 +23,6 @@
 #include <thread>
 #include <dlib/tokenizer.h>
 #include <dlib/misc_api.h>
-#include <dlib/array.h>
 #include <dlib/dir_nav.h>
 #include <dlib/config_reader.h>
 #include <dlib/queue.h>

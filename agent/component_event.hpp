@@ -20,8 +20,6 @@
 #include <vector>
 #include <cmath>
 
-#include <dlib/array.h>
-
 #include "component.hpp"
 #include "globals.hpp"
 #include "data_item.hpp"
