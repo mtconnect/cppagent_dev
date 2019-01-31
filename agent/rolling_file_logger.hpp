@@ -36,7 +36,7 @@ public:
 	RollingFileLogger(
 		std::string filename,
 		int maxBackupIndex = 9,
-		uint64_t maxSize = 10ull * 1024ull * 1024ull,
+		uint64_t maxSize = 10ui64 * 1024ui64 * 1024ui64,
 		RollingSchedule schedule = NEVER);
 
 	~RollingFileLogger();
