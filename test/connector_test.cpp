@@ -57,6 +57,7 @@ class TestConnector : public Connector
   {
   }
   
+  using Connector::start;
   bool start(unsigned short port)
   {
     m_port = port;
