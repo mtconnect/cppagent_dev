@@ -421,10 +421,12 @@ namespace mtconnect {
             case 'G':
             case 'g':
               size *= 1024;
-
+              [[fallthrough]];
+              
             case 'M':
             case 'm':
               size *= 1024;
+              [[fallthrough]];
 
             case 'K':
             case 'k':
