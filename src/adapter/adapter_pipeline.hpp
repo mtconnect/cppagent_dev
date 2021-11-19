@@ -20,45 +20,43 @@
 #include "pipeline/pipeline.hpp"
 #include "pipeline/transform.hpp"
 
-namespace mtconnect {
-  namespace adapter {
-    struct Handler
-    {
-      using ProcessData = std::function<void(const std::string &data, const std::string &source)>;
-      using ProcessMessage = std::function<void(const std::string &topic, const std::string &data,
-                                                const std::string &source)>;
-      using Connect = std::function<void(const std::string &source)>;
+namespace mtconnect::adapter {
+  struct Handler
+  {
+    using ProcessData = std::function<void(const std::string &data, const std::string &source)>;
+    using ProcessMessage = std::function<void(const std::string &topic, const std::string &data,
+                                              const std::string &source)>;
+    using Connect = std::function<void(const std::string &source)>;
 
-      ProcessData m_processData;
-      ProcessData m_command;
-      ProcessMessage m_processMessage;
+    ProcessData m_processData;
+    ProcessData m_command;
+    ProcessMessage m_processMessage;
 
-      Connect m_connecting;
-      Connect m_connected;
-      Connect m_disconnected;
-    };
+    Connect m_connecting;
+    Connect m_connected;
+    Connect m_disconnected;
+  };
 
-    class AdapterPipeline : public pipeline::Pipeline
-    {
-    public:
-      AdapterPipeline(pipeline::PipelineContextPtr context, boost::asio::io_context::strand &st)
-        : Pipeline(context, st)
-      {}
+  class AdapterPipeline : public pipeline::Pipeline
+  {
+  public:
+    AdapterPipeline(pipeline::PipelineContextPtr context, boost::asio::io_context::strand &st)
+      : Pipeline(context, st)
+    {}
 
-      void build(const ConfigOptions &options) override;
-      virtual std::unique_ptr<Handler> makeHandler();
+    void build(const ConfigOptions &options) override;
+    virtual std::unique_ptr<Handler> makeHandler();
 
-    protected:
-      void buildDeviceList();
-      void buildCommandAndStatusDelivery();
-      void buildAssetDelivery(pipeline::TransformPtr next);
-      void buildObservationDelivery(pipeline::TransformPtr next);
+  protected:
+    void buildDeviceList();
+    void buildCommandAndStatusDelivery();
+    void buildAssetDelivery(pipeline::TransformPtr next);
+    void buildObservationDelivery(pipeline::TransformPtr next);
 
-    protected:
-      ConfigOptions m_options;
-      StringList m_devices;
-      std::optional<std::string> m_device;
-      std::string m_identity;
-    };
-  }  // namespace adapter
-}  // namespace mtconnect
+  protected:
+    ConfigOptions m_options;
+    StringList m_devices;
+    std::optional<std::string> m_device;
+    std::string m_identity;
+  };
+}  // namespace mtconnect::adapter

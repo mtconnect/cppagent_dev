@@ -26,16 +26,14 @@
 #include "requirement.hpp"
 #include "utilities.hpp"
 
-namespace mtconnect {
-  namespace entity {
-    class JsonParser
-    {
-    public:
-      JsonParser() = default;
-      ~JsonParser() = default;
+namespace mtconnect::entity {
+  class JsonParser
+  {
+  public:
+    JsonParser() = default;
+    ~JsonParser() = default;
 
-      EntityPtr parse(FactoryPtr factory, const std::string &document, const std::string &version,
-                      ErrorList &errors);
-    };
-  }  // namespace entity
-}  // namespace mtconnect
+    EntityPtr parse(FactoryPtr factory, const std::string &document, const std::string &version,
+                    ErrorList &errors);
+  };
+}  // namespace mtconnect::entity

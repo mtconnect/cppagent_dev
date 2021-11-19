@@ -26,11 +26,9 @@
 // Must be initialized in the plugin before callign log as follows:
 //    mtconnect::gAgentLogger = config->getLogger();
 //    After that, use PLUGIN_LOG(lvl) << ...;
-namespace mtconnect {
-  namespace configuration {
-    extern boost::log::trivial::logger_type *gAgentLogger;
-  }
-}  // namespace mtconnect
+namespace mtconnect::configuration {
+  extern boost::log::trivial::logger_type *gAgentLogger;
+}  // namespace mtconnect::configuration
 
 #define PLUGIN_LOG(lvl)                                                 \
   BOOST_LOG_STREAM_WITH_PARAMS(*mtconnect::configuration::gAgentLogger, \

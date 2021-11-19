@@ -27,20 +27,18 @@
 #include "utilities.hpp"
 
 struct _xmlNode;
-namespace mtconnect {
-  namespace entity {
-    class XmlParser
-    {
-    public:
-      XmlParser() = default;
-      ~XmlParser() = default;
-      using xmlNodePtr = _xmlNode *;
+namespace mtconnect::entity {
+  class XmlParser
+  {
+  public:
+    XmlParser() = default;
+    ~XmlParser() = default;
+    using xmlNodePtr = _xmlNode *;
 
-      static EntityPtr parseXmlNode(FactoryPtr factory, xmlNodePtr node, ErrorList &errors,
-                                    bool parseNamespaces = true);
-      static EntityPtr parse(FactoryPtr factory, const std::string &document,
-                             const std::string &version, ErrorList &errors,
-                             bool parseNamespaces = true);
-    };
-  }  // namespace entity
-}  // namespace mtconnect
+    static EntityPtr parseXmlNode(FactoryPtr factory, xmlNodePtr node, ErrorList &errors,
+                                  bool parseNamespaces = true);
+    static EntityPtr parse(FactoryPtr factory, const std::string &document,
+                           const std::string &version, ErrorList &errors,
+                           bool parseNamespaces = true);
+  };
+}  // namespace mtconnect::entity

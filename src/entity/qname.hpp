@@ -21,117 +21,115 @@
 #include <string>
 #include <string_view>
 
-namespace mtconnect {
-  namespace entity {
-    class QName : public std::string
+namespace mtconnect::entity {
+  class QName : public std::string
+  {
+  public:
+    QName() = default;
+    QName(const std::string &name, const std::string &ns)
     {
-    public:
-      QName() = default;
-      QName(const std::string &name, const std::string &ns)
+      assign(ns + ":" + name);
+      m_nsLen = ns.length();
+    }
+
+    QName(const std::string &qname) { setQName(qname); }
+
+    void setQName(const std::string &qname, const std::optional<std::string> &ns = std::nullopt)
+    {
+      if (ns)
       {
-        assign(ns + ":" + name);
-        m_nsLen = ns.length();
+        assign(*ns + ":" + qname);
+        m_nsLen = ns->length();
       }
-
-      QName(const std::string &qname) { setQName(qname); }
-
-      void setQName(const std::string &qname, const std::optional<std::string> &ns = std::nullopt)
+      else
       {
-        if (ns)
+        assign(qname);
+        if (auto pos = find(':'); pos != npos)
         {
-          assign(*ns + ":" + qname);
-          m_nsLen = ns->length();
+          m_nsLen = pos;
         }
         else
         {
-          assign(qname);
-          if (auto pos = find(':'); pos != npos)
-          {
-            m_nsLen = pos;
-          }
-          else
-          {
-            m_nsLen = 0;
-          }
+          m_nsLen = 0;
         }
       }
+    }
 
-      QName(const QName &other) = default;
-      ~QName() = default;
+    QName(const QName &other) = default;
+    ~QName() = default;
 
-      QName &operator=(const std::string &name)
+    QName &operator=(const std::string &name)
+    {
+      setQName(name);
+      return *this;
+    }
+
+    void setName(const std::string &name)
+    {
+      if (m_nsLen == 0)
       {
-        setQName(name);
-        return *this;
+        assign(name);
       }
-
-      void setName(const std::string &name)
+      else
       {
-        if (m_nsLen == 0)
-        {
-          assign(name);
-        }
-        else
-        {
-          std::string ns(getNs());
-          assign(ns + ':' + name);
-        }
+        std::string ns(getNs());
+        assign(ns + ':' + name);
       }
+    }
 
-      bool hasNs() const { return m_nsLen > 0; }
+    bool hasNs() const { return m_nsLen > 0; }
 
-      void setNs(const std::string &ns)
+    void setNs(const std::string &ns)
+    {
+      std::string name(getName());
+      m_nsLen = ns.length();
+      if (m_nsLen > 0)
       {
-        std::string name(getName());
-        m_nsLen = ns.length();
-        if (m_nsLen > 0)
-        {
-          assign(ns + ':' + name);
-        }
-        else
-        {
-          assign(name);
-        }
+        assign(ns + ':' + name);
       }
-
-      void clear()
+      else
       {
-        std::string::clear();
-        m_nsLen = 0;
+        assign(name);
       }
+    }
 
-      const auto &getQName() const { return *this; }
-      const std::string_view getName() const
-      {
-        if (m_nsLen == 0)
-          return std::string_view(*this);
-        else
-          return std::string_view(c_str() + m_nsLen + 1);
-      }
-      const std::string_view getNs() const
-      {
-        if (m_nsLen == 0)
-          return std::string_view();
-        else
-          return std::string_view(c_str(), m_nsLen);
-      }
-      const std::pair<std::string, std::string> getPair() const
-      {
-        if (m_nsLen > 0)
-        {
-          return {std::string(getNs()), std::string(getName())};
-        }
-        else
-        {
-          return {std::string(), *this};
-        }
-      }
+    void clear()
+    {
+      std::string::clear();
+      m_nsLen = 0;
+    }
 
-      std::string &str() { return *this; }
-      const std::string &str() const { return *this; }
+    const auto &getQName() const { return *this; }
+    const std::string_view getName() const
+    {
+      if (m_nsLen == 0)
+        return std::string_view(*this);
+      else
+        return std::string_view(c_str() + m_nsLen + 1);
+    }
+    const std::string_view getNs() const
+    {
+      if (m_nsLen == 0)
+        return std::string_view();
+      else
+        return std::string_view(c_str(), m_nsLen);
+    }
+    const std::pair<std::string, std::string> getPair() const
+    {
+      if (m_nsLen > 0)
+      {
+        return {std::string(getNs()), std::string(getName())};
+      }
+      else
+      {
+        return {std::string(), *this};
+      }
+    }
 
-    protected:
-      size_t m_nsLen;
-    };
-  }  // namespace entity
-}  // namespace mtconnect
+    std::string &str() { return *this; }
+    const std::string &str() const { return *this; }
+
+  protected:
+    size_t m_nsLen;
+  };
+}  // namespace mtconnect::entity

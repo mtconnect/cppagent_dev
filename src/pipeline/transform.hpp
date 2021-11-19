@@ -25,11 +25,9 @@
 #include "pipeline_context.hpp"
 
 namespace mtconnect {
-  namespace device_model {
-    namespace data_item {
-      class DataItem;
-    }
-  }  // namespace device_model
+  namespace device_model::data_item {
+    class DataItem;
+  }  // namespace device_model::data_item
   using DataItemPtr = std::shared_ptr<device_model::data_item::DataItem>;
   namespace pipeline {
     // A transform takes an entity and transforms it to another

@@ -11,6 +11,7 @@ AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 4
+CompactNamespaces: true
 SpaceBeforeCpp11BracedList: true
 AlignEscapedNewlines: true
 BreakStringLiterals: true

@@ -26,73 +26,70 @@
 
 #include "routing.hpp"
 
-namespace mtconnect {
-  namespace rest_sink {
-    struct Response;
-    using ResponsePtr = std::unique_ptr<Response>;
-    class Session;
-    using SessionPtr = std::shared_ptr<Session>;
-    using ErrorFunction =
-        std::function<void(SessionPtr, boost::beast::http::status status, const std::string &msg)>;
+namespace mtconnect::rest_sink {
+  struct Response;
+  using ResponsePtr = std::unique_ptr<Response>;
+  class Session;
+  using SessionPtr = std::shared_ptr<Session>;
+  using ErrorFunction =
+      std::function<void(SessionPtr, boost::beast::http::status status, const std::string &msg)>;
 
-    using Dispatch = std::function<bool(SessionPtr, RequestPtr)>;
-    using Complete = std::function<void()>;
-    using FieldList = std::list<std::pair<std::string, std::string>>;
+  using Dispatch = std::function<bool(SessionPtr, RequestPtr)>;
+  using Complete = std::function<void()>;
+  using FieldList = std::list<std::pair<std::string, std::string>>;
 
-    class Session : public std::enable_shared_from_this<Session>
+  class Session : public std::enable_shared_from_this<Session>
+  {
+  public:
+    Session(Dispatch dispatch, ErrorFunction func) : m_dispatch(dispatch), m_errorFunction(func) {}
+    virtual ~Session() {}
+
+    virtual void run() = 0;
+    virtual void writeResponse(ResponsePtr &&response, Complete complete = nullptr) = 0;
+    virtual void writeFailureResponse(ResponsePtr &&response, Complete complete = nullptr) = 0;
+    virtual void beginStreaming(const std::string &mimeType, Complete complete) = 0;
+    virtual void writeChunk(const std::string &chunk, Complete complete) = 0;
+    virtual void close() = 0;
+    virtual void closeStream() = 0;
+    virtual void fail(boost::beast::http::status status, const std::string &message,
+                      boost::system::error_code ec = boost::system::error_code {})
     {
-    public:
-      Session(Dispatch dispatch, ErrorFunction func) : m_dispatch(dispatch), m_errorFunction(func)
-      {}
-      virtual ~Session() {}
+      NAMED_SCOPE("Session::fail");
 
-      virtual void run() = 0;
-      virtual void writeResponse(ResponsePtr &&response, Complete complete = nullptr) = 0;
-      virtual void writeFailureResponse(ResponsePtr &&response, Complete complete = nullptr) = 0;
-      virtual void beginStreaming(const std::string &mimeType, Complete complete) = 0;
-      virtual void writeChunk(const std::string &chunk, Complete complete) = 0;
-      virtual void close() = 0;
-      virtual void closeStream() = 0;
-      virtual void fail(boost::beast::http::status status, const std::string &message,
-                        boost::system::error_code ec = boost::system::error_code {})
+      LOG(warning) << "Operation failed: " << message;
+      if (ec)
       {
-        NAMED_SCOPE("Session::fail");
-
-        LOG(warning) << "Operation failed: " << message;
-        if (ec)
-        {
-          LOG(warning) << "Closing: " << ec.category().message(ec.value()) << " - " << ec.message();
-          close();
-        }
-        else
-        {
-          m_errorFunction(shared_from_this(), status, message);
-        }
+        LOG(warning) << "Closing: " << ec.category().message(ec.value()) << " - " << ec.message();
+        close();
       }
-
-      void allowPuts(bool allow = true) { m_allowPuts = allow; }
-      void allowPutsFrom(std::set<boost::asio::ip::address> &hosts)
+      else
       {
-        m_allowPuts = true;
-        m_allowPutsFrom = hosts;
+        m_errorFunction(shared_from_this(), status, message);
       }
-      auto getRemote() const { return m_remote; }
-      void setUnauthorized(const std::string &msg)
-      {
-        m_message = msg;
-        m_unauthorized = true;
-      }
+    }
 
-    protected:
-      Dispatch m_dispatch;
-      ErrorFunction m_errorFunction;
+    void allowPuts(bool allow = true) { m_allowPuts = allow; }
+    void allowPutsFrom(std::set<boost::asio::ip::address> &hosts)
+    {
+      m_allowPuts = true;
+      m_allowPutsFrom = hosts;
+    }
+    auto getRemote() const { return m_remote; }
+    void setUnauthorized(const std::string &msg)
+    {
+      m_message = msg;
+      m_unauthorized = true;
+    }
 
-      std::string m_message;
-      bool m_unauthorized {false};
-      bool m_allowPuts {false};
-      std::set<boost::asio::ip::address> m_allowPutsFrom;
-      boost::asio::ip::tcp::endpoint m_remote;
-    };
+  protected:
+    Dispatch m_dispatch;
+    ErrorFunction m_errorFunction;
 
-  }  // namespace rest_sink
-}  // namespace mtconnect
+    std::string m_message;
+    bool m_unauthorized {false};
+    bool m_allowPuts {false};
+    std::set<boost::asio::ip::address> m_allowPutsFrom;
+    boost::asio::ip::tcp::endpoint m_remote;
+  };
+
+}  // namespace mtconnect::rest_sink

@@ -23,20 +23,18 @@
 
 using json = nlohmann::json;
 
-namespace mtconnect {
-  namespace entity {
-    class JsonPrinter
+namespace mtconnect::entity {
+  class JsonPrinter
+  {
+  public:
+    JsonPrinter() = default;
+
+    json print(const EntityPtr entity) const
     {
-    public:
-      JsonPrinter() = default;
+      return json::object({{entity->getName(), printEntity(entity)}});
+    }
 
-      json print(const EntityPtr entity) const
-      {
-        return json::object({{entity->getName(), printEntity(entity)}});
-      }
-
-    protected:
-      json printEntity(const EntityPtr entity) const;
-    };
-  }  // namespace entity
-}  // namespace mtconnect
+  protected:
+    json printEntity(const EntityPtr entity) const;
+  };
+}  // namespace mtconnect::entity

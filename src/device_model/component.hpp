@@ -29,161 +29,159 @@
 #include "entity/factory.hpp"
 #include "utilities.hpp"
 
-namespace mtconnect {
-  namespace device_model {
-    namespace data_item {
-      class DataItem;
+namespace mtconnect::device_model {
+  namespace data_item {
+    class DataItem;
+  }
+
+  class Component;
+  using ComponentPtr = std::shared_ptr<Component>;
+
+  class Device;
+  using DevicePtr = std::shared_ptr<Device>;
+
+  using DataItemPtr = std::shared_ptr<data_item::DataItem>;
+  class Component : public entity::Entity
+  {
+  public:
+    Component(const std::string &name, const entity::Properties &props);
+    static ComponentPtr make(const std::string &name, const entity::Properties &props,
+                             entity::ErrorList &errors)
+    {
+      entity::Properties ps(props);
+      auto ptr = getFactory()->make(name, ps, errors);
+      return std::dynamic_pointer_cast<Component>(ptr);
     }
 
-    class Component;
-    using ComponentPtr = std::shared_ptr<Component>;
+    static entity::FactoryPtr getFactory();
+    auto getptr() const { return std::dynamic_pointer_cast<Component>(Entity::getptr()); }
 
-    class Device;
-    using DevicePtr = std::shared_ptr<Device>;
+    virtual void initialize() { connectDataItems(); }
 
-    using DataItemPtr = std::shared_ptr<data_item::DataItem>;
-    class Component : public entity::Entity
+    // Virtual destructor
+    virtual ~Component();
+
+    // Getter methods for the component ID/Name
+    const auto &getId() const { return m_id; }
+    const auto &getComponentName() const { return m_name; }
+    const auto &getUuid() const { return m_uuid; }
+
+    entity::EntityPtr getDescription()
     {
-    public:
-      Component(const std::string &name, const entity::Properties &props);
-      static ComponentPtr make(const std::string &name, const entity::Properties &props,
-                               entity::ErrorList &errors)
+      if (hasProperty("Description"))
+        return get<entity::EntityPtr>("Description");
+      else
       {
-        entity::Properties ps(props);
-        auto ptr = getFactory()->make(name, ps, errors);
-        return std::dynamic_pointer_cast<Component>(ptr);
+        entity::ErrorList errors;
+        auto desc = getFactory()->create("Description", {}, errors);
+        if (desc)
+          setProperty("Description", desc);
+        return desc;
       }
+    }
 
-      static entity::FactoryPtr getFactory();
-      auto getptr() const { return std::dynamic_pointer_cast<Component>(Entity::getptr()); }
+    void setManufacturer(const std::string &value)
+    {
+      auto desc = getDescription();
+      desc->setProperty("manufacturer", value);
+    }
 
-      virtual void initialize() { connectDataItems(); }
+    void setStation(const std::string &value)
+    {
+      auto desc = getDescription();
+      desc->setProperty("station", value);
+    }
 
-      // Virtual destructor
-      virtual ~Component();
+    void setSerialNumber(const std::string &value)
+    {
+      auto desc = getDescription();
+      desc->setProperty("serialNumber", value);
+    }
 
-      // Getter methods for the component ID/Name
-      const auto &getId() const { return m_id; }
-      const auto &getComponentName() const { return m_name; }
-      const auto &getUuid() const { return m_uuid; }
+    void setDescriptionValue(const std::string &value)
+    {
+      auto desc = getDescription();
+      desc->setValue(value);
+    }
 
-      entity::EntityPtr getDescription()
+    // Setter methods
+    void setUuid(const std::string &uuid)
+    {
+      m_uuid = uuid;
+      setProperty("uuid", uuid);
+    }
+    void setComponentName(const std::string &name)
+    {
+      m_name = name;
+      setProperty("name", name);
+    }
+
+    // Get the device that any component is associated with
+    virtual DevicePtr getDevice() const
+    {
+      DevicePtr device = m_device.lock();
+      if (!device)
       {
-        if (hasProperty("Description"))
-          return get<entity::EntityPtr>("Description");
-        else
+        auto parent = m_parent.lock();
+        if (parent)
         {
-          entity::ErrorList errors;
-          auto desc = getFactory()->create("Description", {}, errors);
-          if (desc)
-            setProperty("Description", desc);
-          return desc;
+          const_cast<Component *>(this)->m_device = parent->getDevice();
+          device = m_device.lock();
         }
       }
+      return device;
+    }
 
-      void setManufacturer(const std::string &value)
-      {
-        auto desc = getDescription();
-        desc->setProperty("manufacturer", value);
-      }
+    // Set/Get the component's parent component
+    ComponentPtr getParent() const { return m_parent.lock(); }
 
-      void setStation(const std::string &value)
-      {
-        auto desc = getDescription();
-        desc->setProperty("station", value);
-      }
-
-      void setSerialNumber(const std::string &value)
-      {
-        auto desc = getDescription();
-        desc->setProperty("serialNumber", value);
-      }
-
-      void setDescriptionValue(const std::string &value)
-      {
-        auto desc = getDescription();
-        desc->setValue(value);
-      }
-
-      // Setter methods
-      void setUuid(const std::string &uuid)
-      {
-        m_uuid = uuid;
-        setProperty("uuid", uuid);
-      }
-      void setComponentName(const std::string &name)
-      {
-        m_name = name;
-        setProperty("name", name);
-      }
-
-      // Get the device that any component is associated with
-      virtual DevicePtr getDevice() const
-      {
-        DevicePtr device = m_device.lock();
-        if (!device)
-        {
-          auto parent = m_parent.lock();
-          if (parent)
-          {
-            const_cast<Component *>(this)->m_device = parent->getDevice();
-            device = m_device.lock();
-          }
-        }
-        return device;
-      }
-
-      // Set/Get the component's parent component
-      ComponentPtr getParent() const { return m_parent.lock(); }
-
-      // Add to/get the component's std::list of children
-      auto getChildren() const { return getList("Components"); }
-      void addChild(ComponentPtr child, entity::ErrorList &errors)
-      {
-        addToList("Components", Component::getFactory(), child, errors);
-        child->setParent(getptr());
-        auto device = getDevice();
-        if (device)
-          child->buildDeviceMaps(device);
-      }
-
-      // Add to/get the component's std::list of data items
-      virtual void addDataItem(DataItemPtr dataItem, entity::ErrorList &errors);
-      auto getDataItems() const { return getList("DataItems"); }
-
-      bool operator<(const Component &comp) const { return m_id < comp.getId(); }
-      bool operator==(const Component &comp) const { return m_id == comp.getId(); }
-
-      // References
-      void resolveReferences(DevicePtr device);
-
-      // Connect data items
-      void connectDataItems();
-      void buildDeviceMaps(DevicePtr device);
-
-    protected:
-      void setParent(ComponentPtr parent) { m_parent = parent; }
-      void setDevice(DevicePtr device) { m_device = device; }
-
-    protected:
-      // Unique ID for each component
-      std::string m_id;
-
-      // Name for itself
-      std::optional<std::string> m_name;
-
-      // Universal unique identifier
-      std::optional<std::string> m_uuid;
-
-      // Component relationships
-      // Pointer to the parent component
-      std::weak_ptr<Component> m_parent;
-      std::weak_ptr<Device> m_device;
-    };
-
-    struct ComponentComp
+    // Add to/get the component's std::list of children
+    auto getChildren() const { return getList("Components"); }
+    void addChild(ComponentPtr child, entity::ErrorList &errors)
     {
-      bool operator()(const Component *lhs, const Component *rhs) const { return *lhs < *rhs; }
-    };
-  }  // namespace device_model
-}  // namespace mtconnect
+      addToList("Components", Component::getFactory(), child, errors);
+      child->setParent(getptr());
+      auto device = getDevice();
+      if (device)
+        child->buildDeviceMaps(device);
+    }
+
+    // Add to/get the component's std::list of data items
+    virtual void addDataItem(DataItemPtr dataItem, entity::ErrorList &errors);
+    auto getDataItems() const { return getList("DataItems"); }
+
+    bool operator<(const Component &comp) const { return m_id < comp.getId(); }
+    bool operator==(const Component &comp) const { return m_id == comp.getId(); }
+
+    // References
+    void resolveReferences(DevicePtr device);
+
+    // Connect data items
+    void connectDataItems();
+    void buildDeviceMaps(DevicePtr device);
+
+  protected:
+    void setParent(ComponentPtr parent) { m_parent = parent; }
+    void setDevice(DevicePtr device) { m_device = device; }
+
+  protected:
+    // Unique ID for each component
+    std::string m_id;
+
+    // Name for itself
+    std::optional<std::string> m_name;
+
+    // Universal unique identifier
+    std::optional<std::string> m_uuid;
+
+    // Component relationships
+    // Pointer to the parent component
+    std::weak_ptr<Component> m_parent;
+    std::weak_ptr<Device> m_device;
+  };
+
+  struct ComponentComp
+  {
+    bool operator()(const Component *lhs, const Component *rhs) const { return *lhs < *rhs; }
+  };
+}  // namespace mtconnect::device_model

@@ -25,44 +25,42 @@
 
 #include "utilities.hpp"
 
-namespace mtconnect {
-  namespace configuration {
-    class MTConnectService
-    {
-    public:
-      MTConnectService() = default;
-      virtual ~MTConnectService() = default;
+namespace mtconnect::configuration {
+  class MTConnectService
+  {
+  public:
+    MTConnectService() = default;
+    virtual ~MTConnectService() = default;
 
-      virtual int main(int argc, char const *argv[]);
-      virtual void initialize(const boost::program_options::variables_map &options) = 0;
-      virtual void stop() = 0;
-      virtual void start() = 0;
+    virtual int main(int argc, char const *argv[]);
+    virtual void initialize(const boost::program_options::variables_map &options) = 0;
+    virtual void stop() = 0;
+    virtual void start() = 0;
 
-      void setName(std::string const &name) { m_name = name; }
-      std::string const &name() const { return m_name; }
-      void setDebug(bool debug) { m_isDebug = debug; }
-      bool getDebug() { return m_isDebug; }
+    void setName(std::string const &name) { m_name = name; }
+    std::string const &name() const { return m_name; }
+    void setDebug(bool debug) { m_isDebug = debug; }
+    bool getDebug() { return m_isDebug; }
 
-      virtual void usage(int ec = 0);
+    virtual void usage(int ec = 0);
 
-      boost::program_options::variables_map parseOptions(int argc, const char *argv[],
-                                                         boost::optional<std::string> &command,
-                                                         boost::optional<std::string> &config);
+    boost::program_options::variables_map parseOptions(int argc, const char *argv[],
+                                                       boost::optional<std::string> &command,
+                                                       boost::optional<std::string> &config);
 
-    protected:
-      std::string m_name;
-      std::filesystem::path m_configFile;
-      std::string m_pidFile;
-      bool m_isService = false;
-      bool m_isDebug = false;
+  protected:
+    std::string m_name;
+    std::filesystem::path m_configFile;
+    std::string m_pidFile;
+    bool m_isService = false;
+    bool m_isDebug = false;
 
-      void install();
-      void remove();
-      static bool isElevated();
+    void install();
+    void remove();
+    static bool isElevated();
 
 #ifndef _WINDOWS
-      void daemonize();
+    void daemonize();
 #endif
-    };
-  }  // namespace configuration
-}  // namespace mtconnect
+  };
+}  // namespace mtconnect::configuration

@@ -31,325 +31,323 @@
 #include "entity/entity.hpp"
 #include "utilities.hpp"
 
-namespace mtconnect {
-  namespace observation {
-    // Types of Observations:
-    // Event, Sample, Timeseries, DataSetEvent, Message, Alarm,
-    // AssetEvent, ThreeSpaceSmple, Condition, AssetEvent
+namespace mtconnect::observation {
+  // Types of Observations:
+  // Event, Sample, Timeseries, DataSetEvent, Message, Alarm,
+  // AssetEvent, ThreeSpaceSmple, Condition, AssetEvent
 
-    class Observation;
-    using ObservationPtr = std::shared_ptr<Observation>;
-    using ObservationList = std::list<ObservationPtr>;
+  class Observation;
+  using ObservationPtr = std::shared_ptr<Observation>;
+  using ObservationList = std::list<ObservationPtr>;
 
-    class Observation : public entity::Entity
+  class Observation : public entity::Entity
+  {
+  public:
+    using super = entity::Entity;
+    using entity::Entity::Entity;
+
+    static entity::FactoryPtr getFactory();
+    ~Observation() override = default;
+    virtual ObservationPtr copy() const { return std::make_shared<Observation>(); }
+
+    static ObservationPtr make(const DataItemPtr dataItem, const entity::Properties &props,
+                               const Timestamp &timestamp, entity::ErrorList &errors);
+
+    static void setProperties(const DataItemPtr dataItem, entity::Properties &props)
     {
-    public:
-      using super = entity::Entity;
-      using entity::Entity::Entity;
+      for (auto &prop : dataItem->getObservationProperties())
+        props.emplace(prop);
+    }
 
-      static entity::FactoryPtr getFactory();
-      ~Observation() override = default;
-      virtual ObservationPtr copy() const { return std::make_shared<Observation>(); }
+    void setDataItem(const DataItemPtr dataItem)
+    {
+      m_dataItem = dataItem;
+      setProperties(dataItem, m_properties);
+    }
 
-      static ObservationPtr make(const DataItemPtr dataItem, const entity::Properties &props,
-                                 const Timestamp &timestamp, entity::ErrorList &errors);
+    const auto getDataItem() const { return m_dataItem; }
+    auto getSequence() const { return m_sequence; }
 
-      static void setProperties(const DataItemPtr dataItem, entity::Properties &props)
-      {
-        for (auto &prop : dataItem->getObservationProperties())
-          props.emplace(prop);
-      }
+    void setTimestamp(const Timestamp &ts)
+    {
+      m_timestamp = ts;
+      setProperty("timestamp", m_timestamp);
+    }
+    auto getTimestamp() const { return m_timestamp; }
 
-      void setDataItem(const DataItemPtr dataItem)
-      {
-        m_dataItem = dataItem;
-        setProperties(dataItem, m_properties);
-      }
+    void setSequence(int64_t sequence)
+    {
+      m_sequence = sequence;
+      setProperty("sequence", sequence);
+    }
 
-      const auto getDataItem() const { return m_dataItem; }
-      auto getSequence() const { return m_sequence; }
+    virtual void makeUnavailable()
+    {
+      using namespace std::literals;
+      m_unavailable = true;
+      setProperty("VALUE", "UNAVAILABLE"s);
+    }
+    bool isUnavailable() const { return m_unavailable; }
+    virtual void setEntityName() { Entity::setQName(m_dataItem->getObservationName()); }
 
-      void setTimestamp(const Timestamp &ts)
-      {
-        m_timestamp = ts;
-        setProperty("timestamp", m_timestamp);
-      }
-      auto getTimestamp() const { return m_timestamp; }
+    bool operator<(const Observation &another) const
+    {
+      if ((*m_dataItem) < (*another.m_dataItem))
+        return true;
+      else if (*m_dataItem == *another.m_dataItem)
+        return m_sequence < another.m_sequence;
+      else
+        return false;
+    }
 
-      void setSequence(int64_t sequence)
-      {
-        m_sequence = sequence;
-        setProperty("sequence", sequence);
-      }
+    void clearResetTriggered() { m_properties.erase("resetTriggered"); }
 
-      virtual void makeUnavailable()
-      {
-        using namespace std::literals;
-        m_unavailable = true;
-        setProperty("VALUE", "UNAVAILABLE"s);
-      }
-      bool isUnavailable() const { return m_unavailable; }
-      virtual void setEntityName() { Entity::setQName(m_dataItem->getObservationName()); }
+  protected:
+    Timestamp m_timestamp;
+    bool m_unavailable {false};
+    DataItemPtr m_dataItem {nullptr};
+    uint64_t m_sequence {0};
+  };
 
-      bool operator<(const Observation &another) const
-      {
-        if ((*m_dataItem) < (*another.m_dataItem))
-          return true;
-        else if (*m_dataItem == *another.m_dataItem)
-          return m_sequence < another.m_sequence;
-        else
-          return false;
-      }
+  class Sample : public Observation
+  {
+  public:
+    using super = Observation;
 
-      void clearResetTriggered() { m_properties.erase("resetTriggered"); }
+    using Observation::Observation;
+    static entity::FactoryPtr getFactory();
+    ~Sample() override = default;
 
-    protected:
-      Timestamp m_timestamp;
-      bool m_unavailable {false};
-      DataItemPtr m_dataItem {nullptr};
-      uint64_t m_sequence {0};
+    ObservationPtr copy() const override { return std::make_shared<Sample>(*this); }
+  };
+
+  class ThreeSpaceSample : public Sample
+  {
+  public:
+    using super = Sample;
+
+    using Sample::Sample;
+    static entity::FactoryPtr getFactory();
+    ~ThreeSpaceSample() override = default;
+  };
+
+  class Timeseries : public Sample
+  {
+  public:
+    using super = Sample;
+
+    using Sample::Sample;
+    static entity::FactoryPtr getFactory();
+    ~Timeseries() override = default;
+
+    ObservationPtr copy() const override { return std::make_shared<Timeseries>(*this); }
+  };
+
+  class Condition;
+  using ConditionPtr = std::shared_ptr<Condition>;
+  using ConditionList = std::list<ConditionPtr>;
+
+  class Condition : public Observation
+  {
+  public:
+    using super = Observation;
+
+    enum Level
+    {
+      NORMAL,
+      WARNING,
+      FAULT,
+      UNAVAILABLE
     };
 
-    class Sample : public Observation
+    using Observation::Observation;
+    static entity::FactoryPtr getFactory();
+    ~Condition() override = default;
+    ObservationPtr copy() const override { return std::make_shared<Condition>(*this); }
+
+    ConditionPtr getptr() { return std::dynamic_pointer_cast<Condition>(Entity::getptr()); }
+
+    void setLevel(Level level)
     {
-    public:
-      using super = Observation;
+      m_level = level;
+      setEntityName();
+    }
 
-      using Observation::Observation;
-      static entity::FactoryPtr getFactory();
-      ~Sample() override = default;
-
-      ObservationPtr copy() const override { return std::make_shared<Sample>(*this); }
-    };
-
-    class ThreeSpaceSample : public Sample
+    void setLevel(const std::string &s)
     {
-    public:
-      using super = Sample;
+      if (iequals("normal", s))
+        setLevel(NORMAL);
+      else if (iequals("warning", s))
+        setLevel(WARNING);
+      else if (iequals("fault", s))
+        setLevel(FAULT);
+      else if (iequals("unavailable", s))
+        setLevel(UNAVAILABLE);
+      else
+        throw entity::PropertyError("Invalid Condition Level: " + s);
+    }
 
-      using Sample::Sample;
-      static entity::FactoryPtr getFactory();
-      ~ThreeSpaceSample() override = default;
-    };
-
-    class Timeseries : public Sample
+    void normal()
     {
-    public:
-      using super = Sample;
+      m_level = NORMAL;
+      m_code.clear();
+      m_properties.erase("nativeCode");
+      m_properties.erase("nativeSeverity");
+      m_properties.erase("qualifier");
+      m_properties.erase("statistic");
+      m_properties.erase("VALUE");
+      setEntityName();
+    }
 
-      using Sample::Sample;
-      static entity::FactoryPtr getFactory();
-      ~Timeseries() override = default;
-
-      ObservationPtr copy() const override { return std::make_shared<Timeseries>(*this); }
-    };
-
-    class Condition;
-    using ConditionPtr = std::shared_ptr<Condition>;
-    using ConditionList = std::list<ConditionPtr>;
-
-    class Condition : public Observation
+    void makeUnavailable() override
     {
-    public:
-      using super = Observation;
+      m_unavailable = true;
+      m_level = UNAVAILABLE;
+      setEntityName();
+    }
 
-      enum Level
+    void setEntityName() override
+    {
+      switch (m_level)
       {
-        NORMAL,
-        WARNING,
-        FAULT,
-        UNAVAILABLE
-      };
+        case NORMAL:
+          setQName("Normal");
+          break;
 
-      using Observation::Observation;
-      static entity::FactoryPtr getFactory();
-      ~Condition() override = default;
-      ObservationPtr copy() const override { return std::make_shared<Condition>(*this); }
+        case WARNING:
+          setQName("Warning");
+          break;
 
-      ConditionPtr getptr() { return std::dynamic_pointer_cast<Condition>(Entity::getptr()); }
+        case FAULT:
+          setQName("Fault");
+          break;
 
-      void setLevel(Level level)
-      {
-        m_level = level;
-        setEntityName();
+        case UNAVAILABLE:
+          setQName("Unavailable");
+          break;
       }
+    }
 
-      void setLevel(const std::string &s)
-      {
-        if (iequals("normal", s))
-          setLevel(NORMAL);
-        else if (iequals("warning", s))
-          setLevel(WARNING);
-        else if (iequals("fault", s))
-          setLevel(FAULT);
-        else if (iequals("unavailable", s))
-          setLevel(UNAVAILABLE);
-        else
-          throw entity::PropertyError("Invalid Condition Level: " + s);
-      }
+    ConditionPtr getFirst()
+    {
+      if (m_prev)
+        return m_prev->getFirst();
 
-      void normal()
-      {
-        m_level = NORMAL;
-        m_code.clear();
-        m_properties.erase("nativeCode");
-        m_properties.erase("nativeSeverity");
-        m_properties.erase("qualifier");
-        m_properties.erase("statistic");
-        m_properties.erase("VALUE");
-        setEntityName();
-      }
+      return getptr();
+    }
 
-      void makeUnavailable() override
-      {
-        m_unavailable = true;
-        m_level = UNAVAILABLE;
-        setEntityName();
-      }
+    void getConditionList(ConditionList &list)
+    {
+      if (m_prev)
+        m_prev->getConditionList(list);
 
-      void setEntityName() override
-      {
-        switch (m_level)
-        {
-          case NORMAL:
-            setQName("Normal");
-            break;
+      list.emplace_back(getptr());
+    }
 
-          case WARNING:
-            setQName("Warning");
-            break;
-
-          case FAULT:
-            setQName("Fault");
-            break;
-
-          case UNAVAILABLE:
-            setQName("Unavailable");
-            break;
-        }
-      }
-
-      ConditionPtr getFirst()
-      {
-        if (m_prev)
-          return m_prev->getFirst();
-
+    ConditionPtr find(const std::string &code)
+    {
+      if (m_code == code)
         return getptr();
-      }
 
-      void getConditionList(ConditionList &list)
-      {
-        if (m_prev)
-          m_prev->getConditionList(list);
+      if (m_prev)
+        return m_prev->find(code);
 
-        list.emplace_back(getptr());
-      }
+      return nullptr;
+    }
 
-      ConditionPtr find(const std::string &code)
-      {
-        if (m_code == code)
-          return getptr();
+    bool replace(ConditionPtr &old, ConditionPtr &_new);
+    ConditionPtr deepCopy();
+    ConditionPtr deepCopyAndRemove(ConditionPtr &old);
 
-        if (m_prev)
-          return m_prev->find(code);
+    const std::string &getCode() const { return m_code; }
+    Level getLevel() const { return m_level; }
+    ConditionPtr getPrev() const { return m_prev; }
+    void appendTo(ConditionPtr cond) { m_prev = cond; }
 
-        return nullptr;
-      }
+  protected:
+    std::string m_code;
+    Level m_level {NORMAL};
+    ConditionPtr m_prev;
+  };
 
-      bool replace(ConditionPtr &old, ConditionPtr &_new);
-      ConditionPtr deepCopy();
-      ConditionPtr deepCopyAndRemove(ConditionPtr &old);
+  class Event : public Observation
+  {
+  public:
+    using super = Observation;
 
-      const std::string &getCode() const { return m_code; }
-      Level getLevel() const { return m_level; }
-      ConditionPtr getPrev() const { return m_prev; }
-      void appendTo(ConditionPtr cond) { m_prev = cond; }
+    using Observation::Observation;
+    static entity::FactoryPtr getFactory();
+    ~Event() override = default;
+    ObservationPtr copy() const override { return std::make_shared<Event>(*this); }
+  };
 
-    protected:
-      std::string m_code;
-      Level m_level {NORMAL};
-      ConditionPtr m_prev;
-    };
+  class DataSetEvent : public Event
+  {
+  public:
+    using super = Event;
 
-    class Event : public Observation
+    using Event::Event;
+    static entity::FactoryPtr getFactory();
+    ~DataSetEvent() override = default;
+    ObservationPtr copy() const override { return std::make_shared<DataSetEvent>(*this); }
+
+    const DataSet &getDataSet() const
     {
-    public:
-      using super = Observation;
-
-      using Observation::Observation;
-      static entity::FactoryPtr getFactory();
-      ~Event() override = default;
-      ObservationPtr copy() const override { return std::make_shared<Event>(*this); }
-    };
-
-    class DataSetEvent : public Event
+      const entity::Value &v = getValue();
+      return std::get<DataSet>(v);
+    }
+    void setDataSet(const DataSet &set)
     {
-    public:
-      using super = Event;
+      setValue(set);
+      setProperty("count", int64_t(set.size()));
+    }
+  };
 
-      using Event::Event;
-      static entity::FactoryPtr getFactory();
-      ~DataSetEvent() override = default;
-      ObservationPtr copy() const override { return std::make_shared<DataSetEvent>(*this); }
+  using DataSetEventPtr = std::shared_ptr<DataSetEvent>;
 
-      const DataSet &getDataSet() const
-      {
-        const entity::Value &v = getValue();
-        return std::get<DataSet>(v);
-      }
-      void setDataSet(const DataSet &set)
-      {
-        setValue(set);
-        setProperty("count", int64_t(set.size()));
-      }
-    };
+  class TableEvent : public DataSetEvent
+  {
+  public:
+    using DataSetEvent::DataSetEvent;
+    static entity::FactoryPtr getFactory();
+    ObservationPtr copy() const override { return std::make_shared<TableEvent>(*this); }
+  };
 
-    using DataSetEventPtr = std::shared_ptr<DataSetEvent>;
+  class AssetEvent : public Event
+  {
+  public:
+    using super = Event;
 
-    class TableEvent : public DataSetEvent
-    {
-    public:
-      using DataSetEvent::DataSetEvent;
-      static entity::FactoryPtr getFactory();
-      ObservationPtr copy() const override { return std::make_shared<TableEvent>(*this); }
-    };
+    using Event::Event;
+    static entity::FactoryPtr getFactory();
+    ~AssetEvent() override = default;
+    ObservationPtr copy() const override { return std::make_shared<AssetEvent>(*this); }
 
-    class AssetEvent : public Event
-    {
-    public:
-      using super = Event;
+  protected:
+  };
 
-      using Event::Event;
-      static entity::FactoryPtr getFactory();
-      ~AssetEvent() override = default;
-      ObservationPtr copy() const override { return std::make_shared<AssetEvent>(*this); }
+  class Message : public Event
+  {
+  public:
+    using super = Event;
 
-    protected:
-    };
+    using Event::Event;
+    static entity::FactoryPtr getFactory();
+    ~Message() override = default;
+    ObservationPtr copy() const override { return std::make_shared<Message>(*this); }
+  };
 
-    class Message : public Event
-    {
-    public:
-      using super = Event;
+  class Alarm : public Event
+  {
+  public:
+    using super = Event;
 
-      using Event::Event;
-      static entity::FactoryPtr getFactory();
-      ~Message() override = default;
-      ObservationPtr copy() const override { return std::make_shared<Message>(*this); }
-    };
+    using Event::Event;
+    static entity::FactoryPtr getFactory();
+    ~Alarm() override = default;
+    ObservationPtr copy() const override { return std::make_shared<Alarm>(*this); }
+  };
 
-    class Alarm : public Event
-    {
-    public:
-      using super = Event;
-
-      using Event::Event;
-      static entity::FactoryPtr getFactory();
-      ~Alarm() override = default;
-      ObservationPtr copy() const override { return std::make_shared<Alarm>(*this); }
-    };
-
-    using ObservationComparer = bool (*)(ObservationPtr &, ObservationPtr &);
-    inline bool ObservationCompare(ObservationPtr &aE1, ObservationPtr &aE2) { return *aE1 < *aE2; }
-  }  // namespace observation
-}  // namespace mtconnect
+  using ObservationComparer = bool (*)(ObservationPtr &, ObservationPtr &);
+  inline bool ObservationCompare(ObservationPtr &aE1, ObservationPtr &aE2) { return *aE1 < *aE2; }
+}  // namespace mtconnect::observation

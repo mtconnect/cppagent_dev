@@ -47,11 +47,9 @@ namespace mtconnect {
   namespace adapter {
     class Adapter;
   }
-  namespace device_model {
-    namespace data_item {
-      class DataItem;
-    }
-  };  // namespace device_model
+  namespace device_model::data_item {
+    class DataItem;
+  };  // namespace device_model::data_item
   using DataItemPtr = std::shared_ptr<device_model::data_item::DataItem>;
 
   using AssetChangeList = std::vector<std::pair<std::string, std::string>>;

@@ -19,57 +19,53 @@
 
 #include "transform.hpp"
 
-namespace mtconnect {
-  namespace pipeline {
-    class DuplicateFilter : public Transform
+namespace mtconnect::pipeline {
+  class DuplicateFilter : public Transform
+  {
+  public:
+    struct State : TransformState
     {
-    public:
-      struct State : TransformState
-      {
-        std::unordered_map<std::string, entity::Value> m_values;
-      };
-
-      DuplicateFilter(const DuplicateFilter &) = default;
-      DuplicateFilter(PipelineContextPtr context)
-        : Transform("DuplicateFilter"), m_state(context->getSharedState<State>(m_name))
-      {
-        using namespace observation;
-        static constexpr auto lambda = [](const Observation &o) {
-          return !o.getDataItem()->isDiscrete();
-        };
-        m_guard =
-            LambdaGuard<Observation, ExactTypeGuard<Event, Sample, ThreeSpaceSample, Message>>(
-                lambda, RUN) ||
-            TypeGuard<Observation>(SKIP);
-      }
-      ~DuplicateFilter() override = default;
-
-      const entity::EntityPtr operator()(const entity::EntityPtr entity) override
-      {
-        using namespace observation;
-        std::lock_guard<TransformState> guard(*m_state);
-
-        auto o = std::dynamic_pointer_cast<Observation>(entity);
-        auto di = o->getDataItem();
-        auto &id = di->getId();
-
-        auto &values = m_state->m_values;
-        auto old = values.find(id);
-        if (old != values.end() && old->second == o->getValue())
-          return entity::EntityPtr();
-
-        if (old == values.end())
-          values[id] = o->getValue();
-        else
-          old->second = o->getValue();
-
-        return next(entity);
-      }
-
-    protected:
-      std::shared_ptr<State> m_state;
+      std::unordered_map<std::string, entity::Value> m_values;
     };
 
-  }  // namespace pipeline
+    DuplicateFilter(const DuplicateFilter &) = default;
+    DuplicateFilter(PipelineContextPtr context)
+      : Transform("DuplicateFilter"), m_state(context->getSharedState<State>(m_name))
+    {
+      using namespace observation;
+      static constexpr auto lambda = [](const Observation &o) {
+        return !o.getDataItem()->isDiscrete();
+      };
+      m_guard = LambdaGuard<Observation, ExactTypeGuard<Event, Sample, ThreeSpaceSample, Message>>(
+                    lambda, RUN) ||
+                TypeGuard<Observation>(SKIP);
+    }
+    ~DuplicateFilter() override = default;
 
-}  // namespace mtconnect
+    const entity::EntityPtr operator()(const entity::EntityPtr entity) override
+    {
+      using namespace observation;
+      std::lock_guard<TransformState> guard(*m_state);
+
+      auto o = std::dynamic_pointer_cast<Observation>(entity);
+      auto di = o->getDataItem();
+      auto &id = di->getId();
+
+      auto &values = m_state->m_values;
+      auto old = values.find(id);
+      if (old != values.end() && old->second == o->getValue())
+        return entity::EntityPtr();
+
+      if (old == values.end())
+        values[id] = o->getValue();
+      else
+        old->second = o->getValue();
+
+      return next(entity);
+    }
+
+  protected:
+    std::shared_ptr<State> m_state;
+  };
+
+}  // namespace mtconnect::pipeline
