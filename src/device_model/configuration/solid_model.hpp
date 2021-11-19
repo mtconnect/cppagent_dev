@@ -19,14 +19,9 @@
 
 #include "configuration.hpp"
 
-namespace mtconnect {
-  using namespace entity;
-  namespace device_model {
-    namespace configuration {
-      struct SolidModel
-      {
-        static FactoryPtr getFactory();
-      };
-    }  // namespace configuration
-  }    // namespace device_model
-}  // namespace mtconnect
+namespace mtconnect::device_model::configuration {
+  struct SolidModel
+  {
+    static entity::FactoryPtr getFactory();
+  };
+}  // namespace mtconnect::device_model::configuration

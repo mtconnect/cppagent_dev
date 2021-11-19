@@ -207,6 +207,8 @@ if(NOT WITHOUT_PYTHON)
   add_agent_test(python_transform TRUE python)
 endif()
 
+set_tests_properties(config_test PROPERTIES RUN_SERIAL TRUE)
+
 # TODO Reorganize data. Do not copy files around. Unit test could be run only with sources in place.
 add_custom_command(
   TARGET adapter_test POST_BUILD
