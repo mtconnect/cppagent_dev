@@ -150,8 +150,19 @@ namespace mtconnect::entity {
                 }
                 else if (ef->isPropertySet(ent->getName()))
                 {
-                  auto res = properties.try_emplace(ent->getName(), EntityList {});
-                  get<EntityList>(res.first->second).emplace_back(ent);
+                  if (l != nullptr)
+                  {
+                    l->emplace_back(ent);
+                  }
+                  else if (ef->isPropertySet(ent->getName()))
+                  {
+                    auto res = properties.try_emplace(ent->getName(), EntityList {});
+                    get<EntityList>(res.first->second).emplace_back(ent);
+                  }
+                  else
+                  {
+                    properties.insert({ent->getName(), ent});
+                  }
                 }
                 else
                 {

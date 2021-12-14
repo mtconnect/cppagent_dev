@@ -518,7 +518,7 @@ TEST_F(ConnectorTest, SendCommand)
 TEST_F(ConnectorTest, IPV6Connection)
 {
 // TODO: Need to port to Windows > VISTA
-#if !defined(WIN32)
+#if !defined(WIN32) && !defined(AGENT_WITHOUT_IPV6)
   m_connector.reset();
 
   startServer("::1");
@@ -577,4 +577,26 @@ TEST_F(ConnectorTest, StartHeartbeats)
 
   ASSERT_TRUE(m_connector->heartbeats());
   ASSERT_EQ(std::chrono::milliseconds{323}, m_connector->heartbeatFrequency());
+}
+
+TEST_F(ConnectorTest, test_trimming_trailing_white_space)
+{
+  startServer();
+  
+  m_connector->start(m_port);
+  runUntil(2s, [this]() -> bool {
+    return m_connected && m_connector->isConnected();
+  });
+
+  m_connector->m_list.clear();
+  send("first    \r\nseco");
+  m_context.run_for(2ms);
+  send("nd  \t\r\n   \t  \r\n\n  third    \v\r\t\nfourth   \f\t\r\nr  \nfifth");
+  m_context.run_for(2ms);
+  ASSERT_EQ((size_t)5, m_connector->m_list.size());
+  ASSERT_EQ((string) "first", m_connector->m_list[0]);
+  ASSERT_EQ((string) "second", m_connector->m_list[1]);
+  ASSERT_EQ((string) "  third", m_connector->m_list[2]);
+  ASSERT_EQ((string) "fourth", m_connector->m_list[3]);
+  ASSERT_EQ((string) "r", m_connector->m_list[4]);
 }

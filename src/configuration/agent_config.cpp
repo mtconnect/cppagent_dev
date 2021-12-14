@@ -810,6 +810,14 @@ namespace mtconnect::configuration {
         if (factory.empty())
           factory = protocol;
 
+        auto blockOptions = block.second;
+        if (!blockOptions.get_child_optional("logger_config"))
+        {
+          auto logger = config.get_child_optional("logger_config");
+          if (logger)
+            blockOptions.add_child("logger_config", *logger);
+        }
+
         if (!m_sourceFactory.hasFactory(factory) && !loadPlugin(factory, block.second))
           continue;
 
