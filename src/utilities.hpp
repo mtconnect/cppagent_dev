@@ -422,7 +422,7 @@ namespace mtconnect {
             case 'g':
               size *= 1024;
               [[fallthrough]];
-              
+
             case 'M':
             case 'm':
               size *= 1024;
@@ -557,6 +557,7 @@ namespace mtconnect {
       if (!done)
       {
         camel.erase(end);
+        // cppcheck-suppress invalidContainer
         start = end;
       }
     } while (!done);

@@ -141,6 +141,7 @@ namespace mtconnect::entity {
       s = &get<string>(value);
     }
 
+    // cppcheck-suppress returnDanglingLifetime
     return s->c_str();
   }
 

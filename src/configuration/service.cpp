@@ -640,9 +640,11 @@ namespace mtconnect::configuration {
         return;
 
       case SERVICE_CONTROL_INTERROGATE:
+        // cppcheck-suppress missingReturn
         break;
 
       default:
+        // cppcheck-suppress missingReturn
         break;
     }
   }
