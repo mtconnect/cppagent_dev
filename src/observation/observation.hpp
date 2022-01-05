@@ -48,7 +48,7 @@ namespace mtconnect::observation {
 
     static entity::FactoryPtr getFactory();
     ~Observation() override = default;
-    virtual ObservationPtr copy() const { return std::make_shared<Observation>(); }
+    virtual ObservationPtr copy() const = 0;
 
     static ObservationPtr make(const DataItemPtr dataItem, const entity::Properties &props,
                                const Timestamp &timestamp, entity::ErrorList &errors);

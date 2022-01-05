@@ -48,7 +48,7 @@ namespace mtconnect {
                                                      {"name", false},
                                                      {"compositionId", false}}),
                                        [](const std::string &name, Properties &props) -> EntityPtr {
-                                         return make_shared<Observation>(name, props);
+                                              return nullptr;
                                        });
 
         factory->registerFactory("Events:Message", Message::getFactory());
