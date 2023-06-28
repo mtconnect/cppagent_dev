@@ -44,6 +44,7 @@ namespace mtconnect {
       };
 
     public:
+            
       MqttTopicPermission(const std::string& topic)
       {
         m_topic = topic;
@@ -74,6 +75,11 @@ namespace mtconnect {
         return false;
       }
 
+      const std::string& getTopic() const
+      { 
+          return m_topic;
+      }
+
     protected:
       TopicMode m_mode;
       AuthorizationType m_type;
@@ -81,42 +87,99 @@ namespace mtconnect {
 
     };  // namespace MqttTopicPermission
 
+    using MqttTopicPermissionPtr = std::shared_ptr<MqttTopicPermission>;
+
     class MqttAuthorization
     {
     public:
       MqttAuthorization(const ConfigOptions& options) : m_options(options)
       {
-        m_clientId = *GetOption<std::string>(options, configuration::MqttClientId);
         m_username = GetOption<std::string>(options, configuration::MqttUserName);
         m_password = GetOption<std::string>(options, configuration::MqttPassword);
       }
 
       virtual ~MqttAuthorization() = default;
 
-      MqttTopicPermission getPermissionsForClient(const std::string& topic)
+      void addTopicPermissionForClient(const std::string& packetId, const std::string& topic)
       {
-        MqttTopicPermission mqttTopicPerm = *new MqttTopicPermission(topic);
-        return mqttTopicPerm;
-      }
+        if (m_mapMqttTopicPermissions.empty())
+        {
+          list<MqttTopicPermissionPtr> mqttTopicPermissions;
+          MqttTopicPermissionPtr mqttTopicPerm = make_shared<MqttTopicPermission>(topic);
+          mqttTopicPermissions.emplace_back(mqttTopicPerm);
+          m_mapMqttTopicPermissions.emplace(packetId, mqttTopicPermissions);
+        }
+        else
+        {
+          list<MqttTopicPermissionPtr> mqttTopicPermissions = getTopicPermissionsForClient(packetId);
 
-      list<MqttTopicPermission> getPermissionsForClient(const std::list<std::string>& topics)
+          if (!mqttTopicPermissions.empty())
+          {
+            MqttTopicPermissionPtr mqttTopicPerm = make_shared<MqttTopicPermission>(topic);
+            mqttTopicPermissions.emplace_back(mqttTopicPerm);
+            m_mapMqttTopicPermissions[packetId] = mqttTopicPermissions;
+          }
+        }
+      } 
+              
+      void addTopicPermissionsForClient(const std::string& packetId,
+                                        const std::list<std::string>& topics)
       {
-        list<MqttTopicPermission> mqttTopicPermissions;
+        list<MqttTopicPermissionPtr> mqttTopicPermissions;
 
         for (auto& topic : topics)
         {
-          mqttTopicPermissions.push_back(*new MqttTopicPermission(topic));
+          MqttTopicPermissionPtr mqttTopicPerm = make_shared<MqttTopicPermission>(topic);
+          mqttTopicPermissions.emplace_back(mqttTopicPerm);
         }
+        m_mapMqttTopicPermissions.emplace(packetId, mqttTopicPermissions);
+      }
 
-        return mqttTopicPermissions;
+      MqttTopicPermissionPtr getTopicPermissionForClient(const std::string& packetId,
+                                                      const std::string& topic) const
+      {
+        MqttTopicPermissionPtr mqttTopicPerm;
+        for (const auto& mqttPerms : m_mapMqttTopicPermissions)
+        {
+          if (!mqttPerms.second.empty())
+          {
+            for (MqttTopicPermissionPtr mqttperm : mqttPerms.second)
+            {
+              if (mqttperm->getTopic() == topic)
+                return mqttperm;
+            }
+          }
+        }
+        return mqttTopicPerm;        
+      }
+
+      list<MqttTopicPermissionPtr> getTopicPermissionsForClient(const std::string& packetId) 
+      {
+        return m_mapMqttTopicPermissions[packetId];
+      }
+
+      bool hasAuthorization(const std::string& packetId, const std::string& topic)
+      {
+        for (const auto& mqttPerms : m_mapMqttTopicPermissions)
+        {
+          if (!mqttPerms.second.empty())
+          {
+            for (MqttTopicPermissionPtr mqttperm : mqttPerms.second)
+            {
+              if (mqttperm->getTopic() == topic)
+                return mqttperm->hasAuthorization();
+            }
+          }
+        }
+        return false;
       }
 
     protected:
       std::optional<std::string> m_username;
       std::optional<std::string> m_password;
-      std::string m_clientId;
+      std::uint16_t m_packetId;
       ConfigOptions m_options;
-
+      std::map<std::string, list<MqttTopicPermissionPtr> > m_mapMqttTopicPermissions;
     };  // namespace MqttAuthorization
 
     class MqttAuthentication
@@ -138,7 +201,6 @@ namespace mtconnect {
           LOG(error) << "MQTT USERNAME_OR_PASSWORD are Not Available";
           return false;
         }
-
         return true;
       }
 
